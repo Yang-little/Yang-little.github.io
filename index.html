@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raspberry Pi 影像處理與自駕車實作 - Cyberpunk Report</title>
+    <style>
+        /* CSS 變數定義 Cyberpunk 色彩 */
+        :root {
+            --bg-color: #0a0a0c;
+            --neon-green: #00ff66;
+            --neon-blue: #00f0ff;
+            --neon-pink: #ff0055;
+            --text-color: #e0e0e0;
+            --panel-bg: rgba(10, 20, 30, 0.8);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Courier New', Courier, 'Microsoft JhengHei', monospace;
+            margin: 0;
+            padding: 20px;
+            background-image: 
+                linear-gradient(rgba(0, 255, 102, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 102, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: var(--neon-green);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--neon-green), 0 0 20px rgba(0, 255, 102, 0.5);
+            border-bottom: 2px solid var(--neon-green);
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: var(--neon-blue);
+            border-left: 5px solid var(--neon-blue);
+            padding-left: 10px;
+            text-shadow: 0 0 5px var(--neon-blue);
+        }
+
+        .section {
+            background: var(--panel-bg);
+            border: 1px solid rgba(0, 255, 102, 0.3);
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.1) inset;
+            transition: all 0.3s ease;
+        }
+
+        .section:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2) inset, 0 0 10px var(--neon-blue);
+        }
+
+        a {
+            color: var(--neon-pink);
+            text-decoration: none;
+            font-weight: bold;
+            text-shadow: 0 0 5px var(--neon-pink);
+        }
+        a:hover {
+            color: var(--neon-blue);
+            text-shadow: 0 0 5px var(--neon-blue);
+        }
+
+        pre {
+            background-color: #111;
+            color: var(--neon-green);
+            padding: 15px;
+            border-left: 3px solid var(--neon-pink);
+            overflow-x: auto;
+            border-radius: 3px;
+            font-size: 14px;
+        }        
+        .tree {
+            color: var(--neon-blue);
+        }
+
+        img {
+            max-width: 100%;
+            border: 1px solid var(--neon-blue);
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+            margin-bottom: 10px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        ul {
+            list-style-type: square;
+            color: var(--neon-green);
+        }
+        li span {
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>> SYS_INIT: Raspberry Pi 綜合應用報告_</h1>
+
+    <div class="section">
+        <h2>[01] 系統操作員資訊 (USER_INFO)</h2>
+        <ul>
+            <li><span><strong>標題：</strong>樹莓派即時影像處理、人臉辨識與自駕車實作</span></li>
+            <li><span><strong>組員1：</strong>楊致欣 (學號：<span>411306139</span>)</span></li>
+            <li><span><strong>組員2：</strong><span>蕭佑亦</span> (學號：<span>411306158</span>)</span></li>
+            <li><span><strong>組員3：</strong><span>龔正媛</span> (學號：<span>611506009</span>)</span></li>
+            <li><span><strong>GITHUB 鏈結：</strong><a href="https://github.com/Yang-little/Yang-little.github.io" target="_blank">點我前往 GitHub 專案</a></span></li>
+            <li><span><strong>AI 分享鏈結 (綜合除錯)：</strong><a href="https://share.gemini.google/08jkhu98Pcy5" target="_blank">點我查看 AI 對話紀錄</a></span></li>
+            <li><span><strong>AI 分享鏈結 (人臉辨識專區)：</strong><a href="https://share.gemini.google/joga3HxsREbt" target="_blank">點我查看 人臉辨識 AI 紀錄</a></span></li>
+        </ul>
+    </div>
+
+    <div class="grid-2">
+        <div class="section">
+            <h2>[02] 資訊程式專案結構 (DIR_TREE)</h2>
+            <pre class="tree">
+ROOT_DIR/
+ ├── collect_faces.py           # 採集人臉樣本
+ ├── train_lbph.py              # 訓練 LBPH 特徵
+ ├── recognize_lbph.py          # 即時人臉辨識
+ ├── process_images.py          # 基礎色彩處理程式
+ ├── app.py                     # Flask 網頁遙控與串流
+ ├── auto_lane_follow(final).py # 車道線偵測與 PID 修正
+ ├── LOBOROBOT2.py              # 馬達驅動函式庫
+ ├── models/                    # 儲存 .yml 模型與標籤
+ └── README.md                  # GitHub 專案說明檔
+            </pre>
+        </div>
+
+        <div class="section">
+            <h2>[03] 系統流程 (WORKFLOW)</h2>
+            <pre>
+[START]
+  │
+  ├─> 1. 影像色彩處理 (RGB/灰階/黑白/16色)
+  │
+  ├─> 2. 人臉辨識 (Haar Cascade + LBPH)
+  │   ├─ 收集 30 張臉部樣本
+  │   ├─ 訓練並產生 yml 模型檔
+  │   └─ Webcam 即時比對特徵並顯示姓名
+  │
+  ├─> 3. 車道線偵測與自駕
+  │   ├─ Picamera2 取得路面影像
+  │   ├─ 透過 ROI 遮罩與 Canny 抓取邊緣
+  │   ├─ HoughLinesP 算出偏移量 (CTE)
+  │   └─ 控制馬達進行方向修正
+  │
+[END]
+            </pre>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>[04] 核心功能說明 (CORE_FUNCTIONS)</h2>
+        <p>本次專案涵蓋三大核心技術領域：</p>
+        <ul>
+            <li><strong>基礎影像處理：</strong>透過 OpenCV 對圖片進行 RGB、灰階(Grayscale)、二值化(Binary) 與 256/16 降色階處理。</li>
+            <li><strong>人臉識別與辨識：</strong>結合 Haar Cascade 分類器抓取人臉區域，並利用 LBPHFaceRecognizer 進行特徵訓練，實現即時身分比對。</li>
+            <li><strong>自駕車車道線偵測：</strong>使用 <code>GaussianBlur</code> 降噪、<code>Canny</code> 邊緣偵測、設定 <code>ROI 遮罩</code> 過濾環境雜訊，最後透過霍夫轉換找出車道線並計算中心偏移誤差 (CTE)，進行自動循跡。</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>[05] 異常排除 (TROUBLE-SHOOTING)</h2>
+        <ul>
+            <li>
+                <span><strong>問題：</strong> OpenCV 報錯 <code>Can't open file: ...\haarcascade_frontalface_alt.xml</code></span><br>
+                <span><strong>解決方式：</strong> 此為 C++ 底層 API 無法處理 Windows 中文路徑所致。將整個專案資料夾移至純英文路徑 (如 C:\CLASS\...) 即成功解決。</span>
+            </li>
+            <li>
+                <span><strong>問題：</strong> 虛擬環境內報錯 <code>ModuleNotFoundError: No module named 'cv2'</code></span><br>
+                <span><strong>解決方式：</strong> 雖已啟動 <code>.venv</code>，但小房間內無套件。在終端機輸入 <code>pip install opencv-python opencv-contrib-python</code> 後成功執行。</span>
+            </li>
+            <li>
+                <span><strong>問題：</strong> 車道線偵測時，畫面外的雜物嚴重干擾霍夫轉換結果。</span><br>
+                <span><strong>解決方式：</strong> 加入 <strong>ROI (Region of Interest) 遮罩</strong>，透過 <code>cv2.fillPoly</code> 繪製多邊形，只保留畫面下半部的車道區域，大幅提升了 CTE 計算的穩定性。</span>
+            </li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>[06] 執行結果 (MEDIA_OUTPUT)</h2>
+        
+        <p><strong>[Task 1] 影像色彩處理 (OpenCV + VS Code)：</strong></p>
+        <div class="grid-2" style="margin-bottom: 30px;">
+            <div>
+                <p style="color: var(--neon-pink);"><strong>[1] RGB 全彩影像</strong></p>
+                <img src="rgb_monkey.jpg" alt="RGB 全彩猴子" style="width: 100%; display: block;">
+            </div>
+            <div>
+                <p style="color: var(--neon-pink);"><strong>[2] 灰階 (Grayscale)</strong></p>
+                <img src="gray_monkey.jpg" alt="灰階猴子" style="width: 100%; display: block;">
+            </div>
+            <div>
+                <p style="color: var(--neon-pink);"><strong>[3] 黑白 (Binary)</strong></p>
+                <img src="bw_monkey.jpg" alt="黑白二值化猴子" style="width: 100%; display: block;">
+            </div>
+            <div>
+                <p style="color: var(--neon-pink);"><strong>[4] 16色 / 256色處理</strong></p>
+                <img src="color256_monkey.jpg" alt="降色階猴子" style="width: 100%; display: block;">
+            </div>
+        </div>
+
+        <p><strong>[Task 2] LBPH 人臉辨識測試：</strong></p>
+        <div class="grid-2" style="margin-bottom: 30px;">
+            <div>
+                <p style="color: var(--neon-pink);"><strong>即時辨識成功畫面</strong></p>
+                <img src="face_recognition_result.jpg" alt="人臉辨識成功截圖" style="width: 100%; display: block; border: 1px dashed var(--neon-green);">
+            </div>
+            <div style="padding: 10px;">
+                <p style="color: var(--neon-green);">模型訓練數量：30 張樣本</p>
+                <p style="color: var(--neon-green);">使用演算法：Haar Cascade + LBPH</p>
+                <p style="color: var(--text-color);">成功將即時畫面中的人臉標記出姓名 (student01) 並顯示特徵距離 (Confidence 值)。</p>
+            </div>
+        </div>
+
+        <p><strong>[Task 3] 車道線偵測與自駕車控制：</strong></p>
+        <div class="grid-2" style="margin-bottom: 30px;">
+            <div>
+                <p style="color: var(--neon-pink);"><strong>車道線偵測 (ROI+Canny+Hough)</strong></p>
+                <img src="car.jpg" alt="車道線與 CTE 計算" style="width: 100%; display: block;">
+            </div>
+            <div>
+                <p style="color: var(--neon-pink);"><strong>車道線邊緣二值化遮罩</strong></p>
+                <img src="car_gray.jpg" alt="車道線二值化" style="width: 100%; display: block;">
+            </div>
+        </div>
+
+        <p><strong>實際運作錄影 (車道線偵測)：</strong></p>
+        <div style="position: relative; width: 100%; padding-bottom: 56.25%; height: 0; margin-bottom: 20px;">
+            <iframe src="https://www.youtube.com/embed/2ZLdqcos8hk?si=J9C_ocVD7LqgS0Br" 
+                    title="YouTube video player" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                    allowfullscreen 
+                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 1px solid var(--neon-blue); border-radius: 4px;">
+            </iframe>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>[07] 任務日誌 (LOG_&_FEEDBACK)</h2>
+        <p>
+            <strong>心得：</strong><br>
+            本次專案循序漸進地從單機影像色彩處理，推進到人臉辨識與硬體控制的整合。
+            在人臉辨識階段，我們學會了建立虛擬環境、處理套件依賴，並理解了 LBPH 特徵比對的原理。
+            在自駕車階段，透過 ROI 遮罩過濾雜訊，讓我們深刻體會到「乾淨的資料輸入」對於電腦視覺判斷（如 CTE 計算）的關鍵性。整體而言，透過 Flask 架設網頁控制介面，讓我們對物聯網全端應用有了更完整的實作體會。
+        </p>
+        <p>
+            <strong>建議：</strong><br>
+            樹莓派在同時處理即時影像運算（如即時車道線繪製）與馬達控制時，有時會出現些微的畫面延遲與發熱現象。建議未來可以嘗試降低攝影機解析度，或是加入多執行緒（Threading）來分擔 CPU 的負載。
+            此外，在 Windows 開發環境與 Raspberry Pi 之間切換時，路徑編碼（如中文路徑報錯）需要特別留意。
+        </p>
+    </div>
+
+</div>
+
+</body>
+</html>
