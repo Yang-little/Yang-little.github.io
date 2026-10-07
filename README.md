@@ -5,8 +5,8 @@
 * 學號：411306139
 * 姓名：楊致欣
 * 分組繳交：[蕭佑亦411306158 龔正媛611506009]
-* Neocities 網頁報告連結：[貼上你的 Neocities 網址]
-* AI 互動鏈結 (AI Sharing Link)：(https://share.gemini.google/joga3HxsREbt)
+* Neocities 網頁報告連結：[https://rasberry-jester.neocities.org](https://rasberry-jester.neocities.org)
+* AI 互動鏈結 (AI Sharing Link)：(https://share.gemini.google/08jkhu98Pcy5)
 
 ## 📂 專案資訊架構 (Project Structure)
 ├── collect_faces.py           # 人臉資料收集 (Webcam截圖)
